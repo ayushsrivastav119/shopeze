@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyShop — Product</title>
+  <link rel="stylesheet" href="styles.css">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Adobe Data Layer Initialization -->
+  <script>window.adobeDataLayer = window.adobeDataLayer || [];</script>
+  <script src="https://assets.adobedtm.com/21b53c73144b/f11fc3055b35/launch-1ad17d956564-development.min.js" async></script>
+</head>
+<body data-page="pdp">
+  <header>
+    
+    <div class="wrap">
+    <div class="logo">
+        <i class="fas fa-store"></i> Shopeze
+    </div>
+
+    <nav>
+        <a href="index.html">
+            <i class="fas fa-house"></i> Home
+        </a>
+
+        <a href="plp.html">
+            <i class="fas fa-boxes"></i> Products
+        </a>
+
+        <a href="cart.html">
+            <i class="fas fa-shopping-cart"></i> 
+            Cart (<span id="cartCount">0</span>)
+        </a>
+    </nav>
+</div>
+
+</header>
+
+  <main class="wrap">
+    <a class="btn-ghost" href="plp.html">← Back to Products</a>
+
+    <div class="card product-detail" id="pdpCard">
+     <img
+  id="pdpImage"
+  src=""
+  alt="product image"
+  style="
+    width:400px;
+    height:400px;
+    max-height:400px;
+    min-height:400px;
+    object-fit:cover;
+    border-radius:12px;
+    display:block;
+  "
+>
+
+      <div class="pdp-info">
+        <h2 id="pdpTitle">Product title</h2>
+        <div class="muted" id="pdpSku">SKU</div>
+        <div class="price" id="pdpPrice">₹0</div>
+        <p id="pdpDesc">Description</p>
+
+        <div class="qty-row">
+          <label>Quantity</label>
+          <div class="qty-control">
+            <button id="decQty">−</button>
+            <input id="pdpQty" value="1" min="1" type="number">
+            <button id="incQty">+</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button id="addToCartBtn" class="btn">Add to cart</button>
+          <a class="btn-ghost" href="cart.html" style="margin-left:10px">View cart</a>
+        </div>
+      </div>
+    </div>
+  </main>
+   <footer class="footer-dark">
+  <div class="footer-container">
+
+    <div class="footer-col brand">
+      <h2 class="footer-logo">Shopeze</h2>
+      <p class="footer-desc">
+        Making your shopping experience smoother, faster and trendier.
+      </p>
+
+      <div class="footer-social">
+        <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="#"><i class="fa-brands fa-instagram"></i></a>
+        <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+        <a href="#"><i class="fa-brands fa-youtube"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-col">
+      <h4>Explore</h4>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="plp.html">Products</a></li>
+        <li><a href="cart.html">Cart</a></li>
+        <li><a href="checkout.html">Checkout</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="#">Help Center</a></li>
+        <li><a href="#">Order Tracking</a></li>
+        <li><a href="#">Returns & Refunds</a></li>
+        <li><a href="#">Contact Us</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Newsletter</h4>
+      <p>Stay updated with latest offers.</p>
+      <div class="subscribe-box">
+        <input type="email" placeholder="Enter your email">
+        <button>Join</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-bottom">
+    © 2025 <span>Shopeze</span>. All Rights Reserved.
+  </div>
+</footer>
+
+
+  <script src="app.js"></script>
+</body>
+</html>
