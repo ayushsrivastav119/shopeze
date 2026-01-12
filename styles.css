@@ -489,6 +489,113 @@ nav a:hover{background:#eef6ff;color:#0b3f8a}
   background: #eff6ff;
 }
 
+/* ✅ CHECKOUT FORM STYLING */
+#checkoutForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#checkoutForm label {
+  font-weight: 600;
+  color: #111;
+  font-size: 14px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+#checkoutForm input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e0e4e8;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+#checkoutForm input:focus {
+  outline: none;
+  border-color: #1070dc;
+  box-shadow: 0 0 0 3px rgba(16, 112, 220, 0.1);
+}
+
+#checkoutForm input::placeholder {
+  color: #aaa;
+}
+
+/* Offer fields section styling - Highlight in green */
+#checkoutForm label:nth-of-type(4),
+#checkoutForm label:nth-of-type(5),
+#checkoutForm label:nth-of-type(6) {
+  margin-top: 12px;
+  color: #10a937;
+  font-weight: 700;
+}
+
+#checkoutForm input[name="couponCode"],
+#checkoutForm input[name="discount"],
+#checkoutForm input[name="discountPercentage"] {
+  border-color: #c6f6d5;
+  background: #f0fdf4;
+}
+
+#checkoutForm input[name="couponCode"]:focus,
+#checkoutForm input[name="discount"]:focus,
+#checkoutForm input[name="discountPercentage"]:focus {
+  border-color: #10a937;
+  box-shadow: 0 0 0 3px rgba(16, 169, 55, 0.1);
+}
+
+/* Button group styling */
+#checkoutForm > div {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+#checkoutForm .btn {
+  flex: 1;
+  padding: 14px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#checkoutForm .btn:hover {
+  background: rgb(12, 88, 176);
+  box-shadow: 0 4px 12px rgba(16, 112, 220, 0.3);
+  transform: translateY(-2px);
+}
+
+#checkoutForm .btn-ghost {
+  flex: 0.8;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+#checkoutForm .btn-ghost:hover {
+  background: #eef6ff;
+  border-color: #1070dc;
+  transform: translateY(-2px);
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  #checkoutForm > div {
+    flex-direction: column;
+  }
+  
+  #checkoutForm .btn,
+  #checkoutForm .btn-ghost {
+    flex: 1 !important;
+  }
+}
+
 
 
 

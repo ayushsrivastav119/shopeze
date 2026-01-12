@@ -184,13 +184,14 @@ function fireBeginCheckout(cart) {
 
 /* ---------- 5️⃣ HELPER: Fire purchase Event (THANK YOU PAGE) ---------- */
 function firePurchase(order) {
-  // 7️⃣ PURCHASE EVENT (XDM Schema) - Purchase Info: ID, Total Price
-  window.adobeDataLayer.push({
+  // 7️⃣ PURCHASE EVENT (XDM Schema) - Purchase Info: ID, Total Price, Offers (Coupon/Discount)
+  const purchaseEvent = {
     event: "purchase",
     xdmCommerce: {
       order: {
         orderID: order.id,                     // Purchase ID
-        totalValue: order.total,               // Total Price
+        originalTotal: order.originalTotal || order.total,  // ✅ Original total before discount
+        totalValue: order.total,               // ✅ FINAL Total Price (after discount)
         currency: "INR"
       },
       products: order.items.map(item => ({
@@ -201,7 +202,19 @@ function firePurchase(order) {
         quantity: item.qty
       }))
     }
-  });
+  };
+
+  // ✅ Add offers (coupon/discount) if available
+  if (order.couponCode || order.discount) {
+    purchaseEvent.xdmCommerce.offers = {
+      couponCode: order.couponCode || "",           // Applied coupon code
+      discount: order.discount || 0,                // Discount amount (in rupees)
+      discountPercentage: order.discountPercentage || 0,  // Discount percentage
+      finalAmount: order.total                      // ✅ Final amount AFTER discount
+    };
+  }
+
+  window.adobeDataLayer.push(purchaseEvent);
 
   if (window._satellite) {
     _satellite.track("purchase");
@@ -532,14 +545,24 @@ function handleCheckout(){
     const cart = getCart();
     if(cart.length===0){ alert('Cart empty'); return; }
     const formData = new FormData(form);
+    
+    // ✅ Calculate totals with discount
+    const originalTotal = cart.reduce((s,i)=>s + i.price * i.qty, 0);
+    const discountAmount = parseFloat(formData.get('discount')) || 0;
+    const finalTotal = originalTotal - discountAmount;  // Final amount after discount
+    
     const order = {
       id: 'ORD-' + Date.now().toString(36) + '-' + Math.floor(Math.random()*900+100),
       date: new Date().toISOString(),
       name: formData.get('name'),
       email: formData.get('email'),
       address: formData.get('address'),
+      couponCode: formData.get('couponCode') || "",     // ✅ Coupon code
+      discount: discountAmount,                         // ✅ Discount amount
+      discountPercentage: formData.get('discountPercentage') || 0,  // ✅ Discount %
       items: cart,
-      total: cart.reduce((s,i)=>s + i.price * i.qty, 0)
+      originalTotal: originalTotal,                     // Original total before discount
+      total: finalTotal                                 // ✅ Final total AFTER discount
     };
     // store order to session so payment pages can read
     sessionStorage.setItem(ORDER_KEY, JSON.stringify(order));
@@ -616,15 +639,28 @@ function renderThankyou(){
   if(el) el.textContent = order.id;
   const summary = document.getElementById('thankSummary');
   if(summary) {
-    // Display purchase ID and total price
+    // Display purchase ID and total price (with discount if applicable)
     let itemsList = order.items.map(i => `${i.title} (ID: ${i.id}) - ₹${i.price} × ${i.qty}`).join(', ');
-    summary.innerHTML = `
+    
+    let totalHTML = `
       <strong>Purchase ID:</strong> ${order.id}<br>
-      <strong>Total Price:</strong> ₹${order.total.toLocaleString()}<br>
-      <strong>Items:</strong> ${itemsList}<br>
-      <strong>Email:</strong> ${order.email || 'not provided'}<br>
-      A confirmation has been sent to your email.
-    `;
+      <strong>Items:</strong> ${itemsList}<br>`;
+    
+    // ✅ Show discount details if applied
+    if (order.discount > 0 || order.couponCode) {
+      totalHTML += `
+      <strong>Original Total:</strong> ₹${(order.originalTotal || order.total).toLocaleString()}<br>
+      <strong>Coupon Code:</strong> ${order.couponCode || 'None'}<br>
+      <strong>Discount:</strong> -₹${order.discount.toLocaleString()} (${order.discountPercentage}%)<br>
+      <strong style="color: #10a937;">Final Total (After Discount):</strong> <span style="color: #10a937; font-size: 1.2em;">₹${order.total.toLocaleString()}</span><br>`;
+    } else {
+      totalHTML += `<strong>Total Price:</strong> ₹${order.total.toLocaleString()}<br>`;
+    }
+    
+    totalHTML += `<strong>Email:</strong> ${order.email || 'not provided'}<br>
+      A confirmation has been sent to your email.`;
+    
+    summary.innerHTML = totalHTML;
   }
 
   // Fire purchase event
@@ -684,90 +720,11 @@ if (slidesContainer) {
  *****************************************************************************/
 
 // Attach click listeners to ALL links and buttons
-function attachClickListeners() {
-  console.log('🔄 Attaching click listeners to all links and buttons...');
 
-  try {
-    // Get ALL links
-    const allLinks = document.querySelectorAll('a');
-    console.log(`Found ${allLinks.length} links`);
-    
-    allLinks.forEach((link) => {
-      link.addEventListener('click', function(e) {
-        const text = (this.innerText || this.textContent || this.href).trim();
-        
-        // Determine link type and position based on context
-        let linkType = 'link';
-        let linkPosition = 'page';
-        
-        if (this.closest('nav')) {
-          linkType = 'nav';
-          linkPosition = 'header';
-        } else if (this.closest('.footer-col')) {
-          linkType = 'footer';
-          linkPosition = 'footer';
-        } else if (this.closest('.card')) {
-          linkType = 'product';
-          linkPosition = 'product-tile';
-        } else if (this.classList.contains('btn') || this.classList.contains('btn-primary')) {
-          linkType = 'cta';
-          linkPosition = 'button';
-        }
-        
-        console.log(`✅ LINK CLICKED: "${text}" (${linkType} - ${linkPosition})`);
-        fireLinkClicked(text, linkType, linkPosition);
-        
-        // Prevent navigation briefly to allow event to fire
-        if (this.href && !this.href.includes('javascript:') && !this.target) {
-          e.preventDefault();
-          const url = this.href;
-          setTimeout(() => {
-            window.location.href = url;
-          }, 300);
-        }
-      });
-    });
-
-    // Get ALL buttons
-    const allButtons = document.querySelectorAll('button');
-    console.log(`Found ${allButtons.length} buttons`);
-    
-    allButtons.forEach((btn) => {
-      btn.addEventListener('click', function() {
-        const text = (this.innerText || this.textContent || 'Button').trim();
-        
-        // Determine button position based on context
-        let buttonPosition = 'page';
-        
-        if (this.closest('.cart-row')) {
-          buttonPosition = 'cart-action';
-        } else if (this.closest('form')) {
-          buttonPosition = 'form-button';
-        } else if (this.classList.contains('secondary')) {
-          buttonPosition = 'secondary-button';
-        }
-        
-        console.log(`✅ BUTTON CLICKED: "${text}" (${buttonPosition})`);
-        fireLinkClicked(text, 'button', buttonPosition);
-      });
-    });
-
-    console.log('✅ Click listeners attached successfully');
-  } catch(err) {
-    console.error('❌ ERROR attaching listeners:', err);
-  }
-}
-
-console.log('📍 Checking document ready state:', document.readyState);
-
-// Try to attach immediately
-if (document.readyState === 'loading') {
-  console.log('⏳ DOM still loading, waiting for DOMContentLoaded...');
-  document.addEventListener('DOMContentLoaded', attachClickListeners);
-} else {
-  console.log('✅ DOM already loaded, attaching listeners now...');
-  attachClickListeners();
-}
+// ============================================================================
+// CONSOLIDATED EVENT TRACKING - All click listeners are handled in 
+// DOMContentLoaded below. Removed duplicate attachClickListeners() function
+// ============================================================================
 
 // Store linkClicked events in localStorage to persist across page loads
 const CLICK_LOG_KEY = 'acdl_click_log';
@@ -849,16 +806,24 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // Track CTA buttons (Shop Products, Shop Now, Enquiry)
-  document.querySelectorAll('a.btn.primary, button.btn').forEach(btn => {
+  // Track CTA buttons (Shop Products, Shop Now, Enquiry) - Only .btn.primary links
+  document.querySelectorAll('a.btn.primary').forEach(btn => {
     btn.addEventListener('click', function() {
       const linkText = this.innerText.trim() || this.textContent.trim();
       fireLinkClicked(linkText, 'cta', 'hero-section');
     });
   });
 
-  // Track footer links
-  const footerLinks = document.querySelectorAll('.footer-col a');
+  // Track generic buttons (Add to Cart, etc)
+  document.querySelectorAll('button:not([type="submit"]):not([type="reset"])').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const linkText = this.innerText.trim() || this.textContent.trim();
+      fireLinkClicked(linkText, 'button', 'page');
+    });
+  });
+
+  // Track footer links (excluding social media links)
+  const footerLinks = document.querySelectorAll('.footer-col a:not(.footer-social a)');
   footerLinks.forEach(link => {
     link.addEventListener('click', function() {
       const linkText = this.innerText.trim();
@@ -866,25 +831,34 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // Track social media links in footer
+  const socialLinks = document.querySelectorAll('.footer-social a');
+  socialLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.stopPropagation();  // ✅ Prevent bubbling to footer links handler
+      
+      // Get social media name from icon class or href
+      let socialName = 'social';
+      const href = this.href;
+      const iconClass = this.querySelector('i').className;
+      
+      if (iconClass.includes('facebook')) socialName = 'facebook';
+      else if (iconClass.includes('instagram')) socialName = 'instagram';
+      else if (iconClass.includes('twitter') || iconClass.includes('x-twitter')) socialName = 'twitter';
+      else if (iconClass.includes('youtube')) socialName = 'youtube';
+      
+      console.log('✓ Social link clicked:', socialName);
+      fireLinkClicked(socialName + ' social', 'social', 'footer section');
+    });
+  });
+
   // Page-specific tracking
   const page = document.body.dataset.page;
 
   /* PDP – Product View */
+  // Add to Cart button is already tracked in attachClickListeners above
   if (page === "pdp") {
-    const url = new URL(window.location.href);
-    const id = url.searchParams.get("id");
-    if (PRODUCTS && id) {
-      const prod = PRODUCTS.find(p => p.id === id);
-      if (prod) {
-        // Track "Add to Cart" button
-        const addToCartBtn = document.getElementById('addToCartBtn');
-        if (addToCartBtn) {
-          addToCartBtn.addEventListener('click', function() {
-            fireLinkClicked('Add to cart: ' + prod.title, 'cta', 'pdp-cta');
-          });
-        }
-      }
-    }
+    // Any PDP-specific logic (not event tracking) can go here
   }
 
   /* CART – Remove button click */
@@ -929,63 +903,8 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 /*****************************************************************************
- * FALLBACK CLICK TRACKING - Direct element listeners on common elements
+ * FALLBACK CLICK TRACKING - REMOVED DUPLICATE - use DOMContentLoaded above instead
  *****************************************************************************/
-
-// Attach click listeners to ALL links and buttons
-function attachClickListeners() {
-  console.log('🔄 Attaching click listeners to all links and buttons...');
-
-  try {
-    // Get ALL links
-    const allLinks = document.querySelectorAll('a');
-    console.log(`Found ${allLinks.length} links`);
-    
-    allLinks.forEach((link) => {
-      link.addEventListener('click', function(e) {
-        const text = (this.innerText || this.textContent || this.href).trim();
-        console.log(`✅ LINK CLICKED: "${text}"`);
-        fireLinkClicked(text, 'link', 'page');
-        
-        // Prevent navigation briefly to allow event to fire
-        if (this.href && !this.href.includes('javascript:') && !this.target) {
-          e.preventDefault();
-          const url = this.href;
-          setTimeout(() => {
-            window.location.href = url;
-          }, 200);
-        }
-      });
-    });
-
-    // Get ALL buttons
-    const allButtons = document.querySelectorAll('button');
-    console.log(`Found ${allButtons.length} buttons`);
-    
-    allButtons.forEach((btn) => {
-      btn.addEventListener('click', function() {
-        const text = (this.innerText || this.textContent || 'Button').trim();
-        console.log(`✅ BUTTON CLICKED: "${text}"`);
-        fireLinkClicked(text, 'button', 'page');
-      });
-    });
-
-    console.log('✅ Click listeners attached successfully');
-  } catch(err) {
-    console.error('❌ ERROR attaching listeners:', err);
-  }
-}
-
-console.log('📍 Checking document ready state:', document.readyState);
-
-// Try to attach immediately
-if (document.readyState === 'loading') {
-  console.log('⏳ DOM still loading, waiting for DOMContentLoaded...');
-  document.addEventListener('DOMContentLoaded', attachClickListeners);
-} else {
-  console.log('✅ DOM already loaded, attaching listeners now...');
-  attachClickListeners();
-}
 
 
 
