@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MyShop — Payment</title>
+  <title>MyShop — Order Failed</title>
   <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <!-- Adobe Data Layer Initialization -->
   <script>window.adobeDataLayer = window.adobeDataLayer || [];</script>
   <!-- <script src="https://assets.adobedtm.com/21b53c73144b/f11fc3055b35/launch-1ad17d956564-development.min.js" async></script> -->
-<script src="https://assets.adobedtm.com/21b53c73144b/0300bd34c85e/launch-a90656e44503-development.min.js" async></script>
-
+  <script src="https://assets.adobedtm.com/21b53c73144b/0300bd34c85e/launch-a90656e44503-development.min.js" async></script>
 </head>
-<body data-page="payment">
- <header>
+<body data-page="failure">
+  <header>
     
     <div class="wrap">
     <div class="logo">
@@ -40,21 +39,25 @@
 </header>
 
   <main class="wrap">
-    <h2>Payment</h2>
-    <div class="card pay-card">
-      <div id="payThumb" class="pay-thumb"></div>
-      <div class="pay-info">
-        <div class="muted">Product ID: <span id="payProductId"></span></div>
-        <div class="price" id="payAmount">₹0</div>
-        <div class="muted" id="payMethod">Method: —</div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:48px;color:#d32f2f;margin-bottom:16px">
+        <i class="fas fa-times-circle"></i>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px">
-        <button id="confirmPay" class="btn">Pay Now</button>
-        <button id="failureBtn" class="btn btn-danger">Order Failure</button>
+      <h2>Order Failed</h2>
+      <p class="muted" style="margin-top:8px;margin-bottom:16px">Unfortunately, your payment could not be processed. Please try again.</p>
+      <div id="failureSummary" style="text-align:left;background:#f5f5f5;padding:16px;border-radius:6px;margin-bottom:16px">
+        <strong>Order ID:</strong> <span id="failOrderId">—</span><br>
+        <strong>Status:</strong> <span style="color:#d32f2f">Failed</span><br>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <a href="checkout.html" class="btn">Retry Payment</a>
+        <a href="cart.html" class="btn-ghost">Back to Cart</a>
+        <a href="index.html" class="btn-ghost">Back to Home</a>
       </div>
     </div>
   </main>
-   <footer class="footer-dark">
+
+ <footer class="footer-dark">
   <div class="footer-container">
 
     <div class="footer-col brand">

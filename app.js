@@ -35,7 +35,8 @@ function firePageLoaded() {
     "payment-method": { pageName: "payment-method", pageType: "checkout", channel: "web/checkout" },
     payment: { pageName: "payment", pageType: "checkout", channel: "web/checkout" },
     processing: { pageName: "processing", pageType: "checkout", channel: "web/checkout" },
-    thankyou: { pageName: "confirmation", pageType: "confirmation", channel: "web/confirmation" }
+    thankyou: { pageName: "confirmation", pageType: "confirmation", channel: "web/confirmation" },
+    failure: { pageName: "failure", pageType: "checkout", channel: "web/checkout" }
   };
 
   const pageData = pageMap[page] || { pageName: page, pageType: page, channel: "web/" + page };
@@ -608,6 +609,11 @@ function renderPaymentPage(){
     window.location = `processing.html?orderid=${encodeURIComponent(order.id)}`;
     // actual processing: handled in processing page loader
   };
+
+  document.getElementById('failureBtn').onclick = ()=>{
+    // go to failure page
+    window.location = `failure.html?orderid=${encodeURIComponent(order.id)}`;
+  };
 }
 
 /* PAGE: PROCESSING (simulate then go to thankyou) */
@@ -670,6 +676,20 @@ function renderThankyou(){
   sessionStorage.removeItem(ORDER_KEY);
 }
 
+/* PAGE: FAILURE */
+function renderFailure(){
+  const orderid = qParam('orderid');
+  const order = JSON.parse(sessionStorage.getItem(ORDER_KEY) || 'null');
+  if(!order || order.id !== orderid){
+    // still try to show id if present in param
+    const el = document.getElementById('failOrderId');
+    if(el) el.textContent = orderid || '—';
+    return;
+  }
+  const el = document.getElementById('failOrderId');
+  if(el) el.textContent = order.id;
+}
+
 /* On load: detect page and run renderers */
 (function init(){
   updateCartCount();
@@ -683,6 +703,7 @@ function renderThankyou(){
   else if(page === 'payment') renderPaymentPage();
   else if(page === 'processing') renderProcessing();
   else if(page === 'thankyou') renderThankyou();
+  else if(page === 'failure') renderFailure();
 })();
 
 
