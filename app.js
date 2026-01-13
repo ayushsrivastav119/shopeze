@@ -51,9 +51,15 @@ function firePageLoaded() {
     if (prod) {
       productDetails = {
         product: {
-          productID: prod.id,        // Product ID
-          productName: prod.title,   // Product Name
-          price: prod.price          // Product Price
+          productID: prod.id,                    // Product ID
+          productName: prod.title,               // Product Name
+          SKU: prod.sku,                         // ✅ SKU
+          price: prod.price,                     // Product Price
+          quantity: 1,                           // Default quantity on PDP view
+          productImageUrl: prod.img,             // ✅ Product Image URL
+          currencyCode: "INR",                   // ✅ Currency Code
+          productAddMethod: "directView",        // ✅ Add Method (directView on PDP)
+          couponCode: ""                         // ✅ Coupon Code (empty on view)
         }
       };
     }
@@ -63,12 +69,52 @@ function firePageLoaded() {
   if (page === 'cart') {
     const cartData = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
     if (cartData.length > 0) {
-      const products = cartData.map(item => ({
-        productID: item.id,
-        productName: item.title,
-        price: item.price,
-        quantity: item.qty
-      }));
+      const products = cartData.map(item => {
+        const fullProduct = PRODUCTS.find(p => p.id === item.id);
+        return {
+          productID: item.id,
+          productName: item.title,
+          SKU: fullProduct ? fullProduct.sku : "",
+          price: item.price,
+          quantity: item.qty,
+          productImageUrl: item.img || (fullProduct ? fullProduct.img : ""),
+          currencyCode: "INR",
+          productAddMethod: "directAdd",
+          couponCode: ""
+        };
+      });
+      
+      const totalQuantity = cartData.reduce((sum, item) => sum + item.qty, 0);
+      const totalValue = cartData.reduce((sum, item) => sum + (item.price * item.qty), 0);
+      
+      productDetails = {
+        products: products,
+        order: {
+          totalQuantity: totalQuantity,
+          totalValue: totalValue
+        }
+      };
+    }
+  }
+
+  // CHECKOUT: All products in cart (same as cart page)
+  if (page === 'checkout') {
+    const cartData = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+    if (cartData.length > 0) {
+      const products = cartData.map(item => {
+        const fullProduct = PRODUCTS.find(p => p.id === item.id);
+        return {
+          productID: item.id,
+          productName: item.title,
+          SKU: fullProduct ? fullProduct.sku : "",
+          price: item.price,
+          quantity: item.qty,
+          productImageUrl: item.img || (fullProduct ? fullProduct.img : ""),
+          currencyCode: "INR",
+          productAddMethod: "directAdd",
+          couponCode: ""
+        };
+      });
       
       const totalQuantity = cartData.reduce((sum, item) => sum + item.qty, 0);
       const totalValue = cartData.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -186,6 +232,10 @@ function fireBeginCheckout(cart) {
 /* ---------- 5️⃣ HELPER: Fire purchase Event (THANK YOU PAGE) ---------- */
 function firePurchase(order) {
   // 7️⃣ PURCHASE EVENT (XDM Schema) - Purchase Info: ID, Total Price, Offers (Coupon/Discount)
+  
+  // Calculate per-item discount amount (proportional split)
+  const totalQuantity = order.items.reduce((sum, item) => sum + item.qty, 0);
+  
   const purchaseEvent = {
     event: "purchase",
     xdmCommerce: {
@@ -193,15 +243,31 @@ function firePurchase(order) {
         orderID: order.id,                     // Purchase ID
         originalTotal: order.originalTotal || order.total,  // ✅ Original total before discount
         totalValue: order.total,               // ✅ FINAL Total Price (after discount)
-        currency: "INR"
+        currency: "INR",
+        paymentMethod: order.method || ""      // ✅ Payment method
       },
-      products: order.items.map(item => ({
-        productID: item.id,
-        productName: item.title,
-        category: "General",
-        price: item.price,
-        quantity: item.qty
-      }))
+      products: order.items.map(item => {
+        // Find full product details from PRODUCTS array
+        const fullProduct = PRODUCTS.find(p => p.id === item.id);
+        
+        // Calculate proportional discount for this item
+        const itemSubtotal = item.price * item.qty;
+        const orderSubtotal = order.originalTotal || order.total + (order.discount || 0);
+        const discountAmount = orderSubtotal > 0 ? (order.discount || 0) * (itemSubtotal / orderSubtotal) : 0;
+        
+        return {
+          productID: item.id,
+          productName: item.title,
+          SKU: fullProduct ? fullProduct.sku : "",           // ✅ SKU from PRODUCTS
+          quantity: item.qty,
+          price: item.price,
+          discountAmount: Math.round(discountAmount * 100) / 100,  // ✅ Proportional discount per item
+          productImageUrl: item.img || (fullProduct ? fullProduct.img : ""),  // ✅ Product image
+          currencyCode: "INR",                               // ✅ Currency code
+          productAddMethod: "directAdd",                     // ✅ Add method
+          couponCode: order.couponCode || ""                 // ✅ Coupon code
+        };
+      })
     }
   };
 
@@ -222,27 +288,50 @@ function firePurchase(order) {
   }
 }
 
-/* ---------- LEGACY CART DATA LAYER (kept for reference) ---------- */
+/* ---------- CART/CHECKOUT DATA LAYER WITH XDM COMMERCE ---------- */
 function setCartDL(cart) {
   const page = document.body.dataset.page;
 
-  const cartItems = cart.map(i => ({
-    productId: i.id,
-    name: i.title,
-    price: i.price,
-    quantity: i.qty
-  }));
+  // ✅ Enhanced product details with all XDM fields
+  const products = cart.map(item => {
+    const fullProduct = PRODUCTS.find(p => p.id === item.id);
+    return {
+      productID: item.id,
+      productName: item.title,
+      SKU: fullProduct ? fullProduct.sku : "",
+      quantity: item.qty,
+      price: item.price,
+      productImageUrl: item.img || (fullProduct ? fullProduct.img : ""),
+      currencyCode: "INR",
+      productAddMethod: "directAdd",
+      couponCode: ""
+    };
+  });
 
   const totalQuantity = cart.reduce((s, i) => s + i.qty, 0);
   const totalValue = cart.reduce((s, i) => s + i.qty * i.price, 0);
 
-  // Legacy format (kept for tag manager reference)
+  // XDM Commerce format for cart/checkout pages
   if (page === "cart") {
     window.adobeDataLayer.push({
       event: "scView",
       custData: custData,
+      xdmCommerce: {
+        products: products,
+        order: {
+          totalQuantity: totalQuantity,
+          totalValue: totalValue,
+          currency: "INR"
+        }
+      },
+      // Legacy format (kept for tag manager reference)
       cart: {
-        items: cartItems,
+        items: cart.map(i => ({
+          productId: i.id,
+          name: i.title,
+          price: i.price,
+          quantity: i.qty
+        })),
         totalQuantity: totalQuantity,
         totalValue: totalValue,
         currency: "INR"
@@ -252,8 +341,22 @@ function setCartDL(cart) {
     window.adobeDataLayer.push({
       event: "scCheckout",
       custData: custData,
+      xdmCommerce: {
+        products: products,
+        order: {
+          totalQuantity: totalQuantity,
+          totalValue: totalValue,
+          currency: "INR"
+        }
+      },
+      // Legacy format (kept for tag manager reference)
       cart: {
-        items: cartItems,
+        items: cart.map(i => ({
+          productId: i.id,
+          name: i.title,
+          price: i.price,
+          quantity: i.qty
+        })),
         totalQuantity: totalQuantity,
         totalValue: totalValue,
         currency: "INR"
@@ -365,7 +468,7 @@ const CART_KEY = 'mini_cart_v2';
 const ORDER_KEY = 'mini_last_order_v2';
 
 function getCart(){ try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(e){return []} }
-function saveCart(c){ localStorage.setItem(CART_KEY, JSON.stringify(c)); updateCartCount(); srtCartDl(c); }
+function saveCart(c){ localStorage.setItem(CART_KEY, JSON.stringify(c)); updateCartCount(); setCartDL(c); }
 function clearCart(){ localStorage.removeItem(CART_KEY); updateCartCount(); }
 
 function updateCartCount(){
@@ -453,7 +556,8 @@ function renderPDP(){
   /* 🔥 ADOBE ADD TO CART EVENT */
   fireAddToCart(prod, qty);
 
-  window.location = 'cart.html';
+  /* ✅ Show confirmation message instead of redirecting */
+  alert(`Added ${qty} item(s) to cart!`);
 };
 
 }
@@ -502,7 +606,23 @@ function changeItemQty(id, delta){
   const cart = getCart();
   const item = cart.find(i=>i.id===id);
   if(!item) return;
+  
+  const oldQty = item.qty;
   item.qty = Math.max(1, item.qty + delta);
+  const qtyChanged = item.qty - oldQty;  // positive for increase, negative for decrease
+  
+  // Find product to get full details for ACDL event
+  const prod = PRODUCTS.find(p => p.id === id);
+  if (prod) {
+    if (qtyChanged > 0) {
+      // Quantity increased - fire addToCart event
+      fireAddToCart(prod, qtyChanged);
+    } else if (qtyChanged < 0) {
+      // Quantity decreased - fire removeFromCart event
+      fireRemoveFromCart(prod, Math.abs(qtyChanged));
+    }
+  }
+  
   saveCart(cart);
   renderCart();
 }
@@ -572,8 +692,57 @@ function handleCheckout(){
   };
 }
 
+/* Helper: Build detailed product array for data layer */
+function buildDetailedProductArray(items, orderData = {}) {
+  return items.map(item => {
+    const fullProduct = PRODUCTS.find(p => p.id === item.id);
+    
+    // Calculate proportional discount for this item
+    const itemSubtotal = item.price * item.qty;
+    const orderSubtotal = orderData.originalTotal || orderData.total + (orderData.discount || 0) || item.price * item.qty;
+    const discountAmount = orderSubtotal > 0 ? (orderData.discount || 0) * (itemSubtotal / orderSubtotal) : 0;
+    
+    return {
+      productID: item.id,
+      productName: item.title,
+      SKU: fullProduct ? fullProduct.sku : "",
+      quantity: item.qty,
+      price: item.price,
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      productImageUrl: item.img || (fullProduct ? fullProduct.img : ""),
+      currencyCode: "INR",
+      productAddMethod: "directAdd",
+      couponCode: orderData.couponCode || ""
+    };
+  });
+}
+
 /* PAGE: PAYMENT METHOD */
 function wirePaymentOptions(){
+  // Fire payment method view event with product details
+  const orderStr = sessionStorage.getItem(ORDER_KEY);
+  if (orderStr) {
+    const order = JSON.parse(orderStr);
+    
+    // ✅ Build product array with all details using helper
+    const products = buildDetailedProductArray(order.items, order);
+    
+    // Push payment method selection event with comprehensive cart data
+    window.adobeDataLayer.push({
+      event: "paymentMethodPageView",
+      custData: custData,
+      xdmCommerce: {
+        products: products,
+        order: {
+          orderID: order.id,
+          originalTotal: order.originalTotal || order.total,
+          totalValue: order.total,
+          currency: "INR"
+        }
+      }
+    });
+  }
+  
   const buttons = document.querySelectorAll('.pay-option');
   buttons.forEach(b=>{
     b.onclick = ()=>{
@@ -584,6 +753,24 @@ function wirePaymentOptions(){
       const order = JSON.parse(orderStr);
       order.method = method;
       sessionStorage.setItem(ORDER_KEY, JSON.stringify(order));
+      
+      // Fire event when payment method is selected
+      const products = buildDetailedProductArray(order.items, order);
+      window.adobeDataLayer.push({
+        event: "paymentMethodSelected",
+        custData: custData,
+        xdmCommerce: {
+          products: products,
+          order: {
+            orderID: order.id,
+            originalTotal: order.originalTotal || order.total,
+            totalValue: order.total,
+            paymentMethod: method,
+            currency: "INR"
+          }
+        }
+      });
+      
       // go to payment page. We'll pass order id in query for clarity
       window.location = `payment.html?orderid=${encodeURIComponent(order.id)}`;
     };
@@ -595,6 +782,26 @@ function renderPaymentPage(){
   const paramsOrderId = qParam('orderid');
   const order = JSON.parse(sessionStorage.getItem(ORDER_KEY) || 'null');
   if(!order || order.id !== paramsOrderId){ alert('Problem with order. Redirecting to checkout.'); window.location='checkout.html'; return; }
+  
+  // ✅ Fire payment page view event with detailed product data
+  const products = buildDetailedProductArray(order.items, order);
+  
+  // Push payment page view event with comprehensive cart data
+  window.adobeDataLayer.push({
+    event: "paymentPageView",
+    custData: custData,
+    xdmCommerce: {
+      products: products,
+      order: {
+        orderID: order.id,
+        originalTotal: order.originalTotal || order.total,
+        totalValue: order.total,
+        paymentMethod: order.method || "",
+        currency: "INR"
+      }
+    }
+  });
+  
   // show first product's image and id (as requested)
   const first = order.items[0];
   const product = PRODUCTS.find(p=>p.id === first.id) || first;
@@ -605,12 +812,44 @@ function renderPaymentPage(){
   document.getElementById('payMethod').textContent = 'Method: ' + (order.method ? order.method.toUpperCase() : '—');
 
   document.getElementById('confirmPay').onclick = ()=>{
+    // Fire payment confirmation event before redirect
+    window.adobeDataLayer.push({
+      event: "paymentConfirmed",
+      custData: custData,
+      xdmCommerce: {
+        products: products,
+        order: {
+          orderID: order.id,
+          originalTotal: order.originalTotal || order.total,
+          totalValue: order.total,
+          paymentMethod: order.method || "",
+          currency: "INR"
+        }
+      }
+    });
+    
     // simulate payment: go to processing + finalize
     window.location = `processing.html?orderid=${encodeURIComponent(order.id)}`;
     // actual processing: handled in processing page loader
   };
 
   document.getElementById('failureBtn').onclick = ()=>{
+    // Fire payment failure event
+    window.adobeDataLayer.push({
+      event: "paymentFailed",
+      custData: custData,
+      xdmCommerce: {
+        products: products,
+        order: {
+          orderID: order.id,
+          originalTotal: order.originalTotal || order.total,
+          totalValue: order.total,
+          paymentMethod: order.method || "",
+          currency: "INR"
+        }
+      }
+    });
+    
     // go to failure page
     window.location = `failure.html?orderid=${encodeURIComponent(order.id)}`;
   };
@@ -663,7 +902,9 @@ function renderThankyou(){
       totalHTML += `<strong>Total Price:</strong> ₹${order.total.toLocaleString()}<br>`;
     }
     
-    totalHTML += `<strong>Email:</strong> ${order.email || 'not provided'}<br>
+    // ✅ Add payment method
+    totalHTML += `<strong>Payment Method:</strong> ${order.method ? order.method.toUpperCase() : 'N/A'}<br>
+    <strong>Email:</strong> ${order.email || 'not provided'}<br>
       A confirmation has been sent to your email.`;
     
     summary.innerHTML = totalHTML;
