@@ -880,6 +880,12 @@ function renderThankyou(){
     if(el) el.textContent = orderid || '—';
     return;
   }
+  
+  // ✅ Add email from order to custData
+  if (order.email) {
+    custData.email = order.email;
+  }
+  
   const el = document.getElementById('thankOrderId');
   if(el) el.textContent = order.id;
   const summary = document.getElementById('thankSummary');
